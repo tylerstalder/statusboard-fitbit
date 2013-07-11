@@ -142,25 +142,37 @@ app.router.get('/fitbit', function() {
 app.router.get('/sleep', function() {
   var res = this.res;
   var url = 'http://api.fitbit.com/1/user/-/sleep/minutesAsleep/date/today/7d.json';
-  request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
-    var sleep = _.map(data['sleep-minutesAsleep'], function(ob, key) {
-      return {title: ob.dateTime, value: Math.round((ob.value / 60) * 100) / 100 };
+  mongo.Db.connect(mongoUri, function (err, db) {
+    db.collection('tokens', function(er, collection) {
+      collection.findOne({type: 'fitbit'}, function(er,rs) {
+        oauth = {
+          consumer_key: CONSUMER_KEY,
+          consumer_secret: CONSUMER_SECRET,
+          token: rs.token,
+          token_secret: rs.secret
+        };
+
+        request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
+          var sleep = _.map(data['sleep-minutesAsleep'], function(ob, key) {
+            return {title: ob.dateTime, value: Math.round((ob.value / 60) * 100) / 100 };
+          });
+
+          var response = {
+            graph: {
+              title: "Fitbit",
+              datasequences: [
+                {
+                title: "Sleep",
+                datapoints: sleep
+              }
+              ]
+            }
+          };
+          res.end(JSON.stringify(response));
+        });
+      });
     });
-
-    var response = {
-      graph: {
-        title: "Fitbit",
-        datasequences: [
-          {
-          title: "Sleep",
-          datapoints: sleep
-        }
-        ]
-      }
-    };
-    res.end(JSON.stringify(response));
   });
-
 });
 
 app.start(process.env.PORT);
