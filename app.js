@@ -3,7 +3,8 @@ var flatiron = require('flatiron'),
     plates = require('plates'),
     app = flatiron.app,
     request = require('request'),
-    qs = require('querystring');
+    qs = require('querystring'),
+    _ = require('underscore');
 
 var CONSUMER_KEY = process.env.FITBIT_KEY;
 var CONSUMER_SECRET = process.env.FITBIT_SECRET;
@@ -87,8 +88,23 @@ app.router.get('/auth/fitbit', function() {
 app.router.get('/fitbit', function() {
   var res = this.res;
   var url = 'http://api.fitbit.com/1/user/-/activities/steps/date/today/7d.json';
-  request.get({url:url, oauth:oauth, json:true}, function (e, r, user) {
-    res.end(JSON.stringify(user));
+  request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
+    var steps = _.map(data['activities-steps'], function(ob, key) {
+      return {title: ob.dateTime, value: ob.value};
+    });
+
+    var response = {
+      graph: {
+        title: "Fitbit",
+        datasequences: [
+          {
+          title: "Steps",
+          datapoints: steps
+        }
+        ]
+      }
+    };
+    res.end(JSON.stringify(response));
   });
 });
 

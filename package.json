@@ -7,7 +7,8 @@
     "union": "0.3.5",
     "flatiron": "0.3.5",
     "plates": "~0.4.8",
-    "request": "~2.21.0"
+    "request": "~2.21.0",
+    "underscore": "~1.5.1"
   },
   "devDependencies": {
     "api-easy": "0.3.2",
