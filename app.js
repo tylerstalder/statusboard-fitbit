@@ -4,7 +4,13 @@ var flatiron = require('flatiron'),
     app = flatiron.app,
     request = require('request'),
     qs = require('querystring'),
-    _ = require('underscore');
+    _ = require('underscore'),
+    mongo = require('mongodb');
+
+
+var mongoUri = process.env.MONGOLAB_URI ||
+  process.env.MONGOHQ_URL ||
+  'mongodb://localhost/statusboard';
 
 var CONSUMER_KEY = process.env.FITBIT_KEY;
 var CONSUMER_SECRET = process.env.FITBIT_SECRET;
@@ -78,9 +84,22 @@ app.router.get('/auth/fitbit', function() {
       token_secret: perm_token.oauth_token_secret
     };
 
-    url = 'http://api.fitbit.com/1/user/-/activities/steps/date/today/7d.json';
-    request.get({url:url, oauth:oauth, json:true}, function (e, r, user) {
-      res.end(JSON.stringify(user));
+    url = 'http://api.fitbit.com/1/user/-/profile.json';
+
+    request.get({url:url, oauth:oauth, json:true}, function (e, r, response) {
+      var doc = {
+        type: 'fitbit',
+        token: perm_token.oauth_token,
+        secret: perm_token.oauth_token_secret
+      };
+
+      mongo.Db.connect(mongoUri, function (err, db) {
+        db.collection('tokens', function(er, collection) {
+          collection.insert(doc, {safe: true}, function(er,rs) {
+            res.end(JSON.stringify(response));
+          });
+        });
+      });
     });
   });
 });
@@ -88,23 +107,35 @@ app.router.get('/auth/fitbit', function() {
 app.router.get('/fitbit', function() {
   var res = this.res;
   var url = 'http://api.fitbit.com/1/user/-/activities/steps/date/today/7d.json';
-  request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
-    var steps = _.map(data['activities-steps'], function(ob, key) {
-      return {title: ob.dateTime, value: ob.value};
-    });
+  mongo.Db.connect(mongoUri, function (err, db) {
+    db.collection('tokens', function(er, collection) {
+      collection.findOne({type: 'fitbit'}, function(er,rs) {
+        oauth = {
+          consumer_key: CONSUMER_KEY,
+          consumer_secret: CONSUMER_SECRET,
+          token: rs.token,
+          token_secret: rs.secret
+        };
+        request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
+          var steps = _.map(data['activities-steps'], function(ob, key) {
+            return {title: ob.dateTime, value: ob.value};
+          });
 
-    var response = {
-      graph: {
-        title: "Fitbit",
-        datasequences: [
-          {
-          title: "Steps",
-          datapoints: steps
-        }
-        ]
-      }
-    };
-    res.end(JSON.stringify(response));
+          var response = {
+            graph: {
+              title: "Fitbit",
+              datasequences: [
+                {
+                title: "Steps",
+                datapoints: steps
+              }
+              ]
+            }
+          };
+          res.end(JSON.stringify(response));
+        });
+      });
+    });
   });
 });
 
