@@ -15,7 +15,7 @@ var mongoUri = process.env.MONGOLAB_URI ||
 var CONSUMER_KEY = process.env.FITBIT_KEY;
 var CONSUMER_SECRET = process.env.FITBIT_SECRET;
 
-app.config.file({ file: path.join(__dirname, 'config', 'config.json') });
+//app.config.file({ file: path.join(__dirname, 'config', 'config.json') });
 
 app.use(flatiron.plugins.http);
 
