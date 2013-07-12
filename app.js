@@ -5,7 +5,8 @@ var flatiron = require('flatiron'),
     request = require('request'),
     qs = require('querystring'),
     _ = require('underscore'),
-    mongo = require('mongodb');
+    mongo = require('mongodb'),
+    moment = require('moment');
 
 
 var mongoUri = process.env.MONGOLAB_URI ||
@@ -118,7 +119,7 @@ app.router.get('/fitbit', function() {
         };
         request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
           var steps = _.map(data['activities-steps'], function(ob, key) {
-            return {title: ob.dateTime, value: ob.value};
+            return {title: moment(ob.dateTime).format('dddd'), value: ob.value};
           });
 
           var response = {
@@ -154,7 +155,7 @@ app.router.get('/sleep', function() {
 
         request.get({url:url, oauth:oauth, json:true}, function (e, r, data) {
           var sleep = _.map(data['sleep-minutesAsleep'], function(ob, key) {
-            return {title: ob.dateTime, value: Math.round((ob.value / 60) * 100) / 100 };
+            return {title: moment(ob.dateTime).format('dddd'), value: Math.round((ob.value / 60) * 100) / 100 };
           });
 
           var response = {
